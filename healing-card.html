@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>การ์ดฮีลใจ - Story Card Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600;700&family=Itim&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Mitr', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            background: #1a2744;
+        }
+
+        .book-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Canvas Texture Background */
+        .page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 40px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #1a2744;
+            background-image: 
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+        }
+
+        .page.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .page.prev {
+            opacity: 0;
+            transform: translateX(-100%);
+        }
+
+        /* Page Content Styles */
+        .page-content {
+            max-width: 600px;
+            text-align: center;
+            color: #fff;
+            position: relative;
+            z-index: 2;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.8s forwards;
+        }
+
+        .page-subtitle {
+            font-size: 1.1rem;
+            font-weight: 300;
+            opacity: 0.9;
+            margin-bottom: 40px;
+            line-height: 1.8;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.8s 0.3s forwards;
+        }
+
+        .page-text {
+            font-size: 1.1rem;
+            line-height: 2;
+            font-weight: 300;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .page-text.typewriter {
+            animation: fadeInUp 0.8s forwards;
+        }
+
+        /* Writer Credit */
+        .writer-credit {
+            position: absolute;
+            bottom: 80px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        /* Pagination Dots */
+        .pagination {
+            position: absolute;
+            bottom: 30px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .dot.active {
+            background: #fff;
+            transform: scale(1.2);
+        }
+
+        /* Navigation Arrows */
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-arrow:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-arrow.prev {
+            left: 20px;
+        }
+
+        .nav-arrow.next {
+            right: 20px;
+        }
+
+        .nav-arrow.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Music Player */
+        .music-player {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .music-player:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .music-player.playing {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Floating Elements */
+        .floating-element {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0.6;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .bubble {
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2));
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .jellyfish {
+            font-size: 2rem;
+        }
+
+        .star {
+            font-size: 1.5rem;
+        }
+
+        .cloud {
+            font-size: 2rem;
+            opacity: 0.4;
+        }
+
+        /* Touch Effect Particles */
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            border-radius: 50%;
+            animation: particleFade 1s forwards;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(5deg);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes particleFade {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(0);
+            }
+        }
+
+        /* Page Specific Styles */
+        .page-1 {
+            background: linear-gradient(135deg, #1a2744 0%, #2d4a7a 100%);
+        }
+
+        .page-2 {
+            background: linear-gradient(135deg, #2d4a7a 0%, #3d5a8a 100%);
+        }
+
+        .page-3 {
+            background: linear-gradient(135deg, #3d5a8a 0%, #4d6a9a 100%);
+        }
+
+        .page-4 {
+            background: linear-gradient(135deg, #4d6a9a 0%, #5d7aaa 100%);
+        }
+
+        .page-5 {
+            background: linear-gradient(135deg, #5d7aaa 0%, #6d8aba 100%);
+        }
+
+        /* Gift Box Animation */
+        .gift-box {
+            display: none;
+            margin-top: 30px;
+            padding: 20px 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Mitr', sans-serif;
+            font-size: 1rem;
+            color: #fff;
+        }
+
+        .gift-box:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .gift-box.show {
+            display: inline-block;
+            animation: bounceIn 0.6s ease;
+        }
+
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Voice Message Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #2d4a7a;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: #fff;
+            max-width: 400px;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .modal-content p {
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+
+        .modal-close {
+            padding: 10px 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Mitr', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page {
+                padding: 40px 20px;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .page-subtitle, .page-text {
+                font-size: 1rem;
+            }
+
+            .nav-arrow {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .nav-arrow.prev {
+                left: 10px;
+            }
+
+            .nav-arrow.next {
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="book-container">
+        <!-- Page 1: ปล่อยวางเดือนเก่า -->
+        <div class="page page-1 active" data-page="1">
+            <div class="floating-element bubble" style="top: 20%; left: 10%;"></div>
+            <div class="floating-element bubble" style="top: 30%; right: 15%;"></div>
+            <div class="floating-element bubble" style="top: 60%; left: 20%;"></div>
+            <div class="floating-element jellyfish" style="top: 25%; right: 20%;">🪼</div>
+            <div class="floating-element star" style="top: 40%; left: 15%;">⭐</div>
+            
+            <div class="page-content">
+                <h1 class="page-title">September (n.)</h1>
+                <p class="page-text typewriter" data-delay="0">ถึงคนที่ผ่านเรื่องเหนื่อยล้ามาตลอดทั้งเดือนสิงหาคม...</p>
+                <p class="page-text typewriter" data-delay="500">เธอเก่งมากแล้วนะที่พาตัวเองผ่านช่วงเวลาที่ยากลำบากมาได้</p>
+                <p class="page-text typewriter" data-delay="1000">อะไรที่ทำให้เสียน้ำตา หรือเรื่องที่ไม่ใจดี ปล่อยให้มันจบไปพร้อมเดือนเก่านะ</p>
+                <p class="page-text typewriter" data-delay="1500">ปล่อยให้สิงหาคม คือสิงหาคม</p>
+                <p class="page-text typewriter" data-delay="2000">และเปิดใจรับกันยายนที่กำลังจะเริ่มต้นขึ้น :)</p>
+            </div>
+            <p class="writer-credit">Writer | Angusforyou</p>
+        </div>
+
+        <!-- Page 2: ชื่นชมและยอมรับ -->
+        <div class="page page-2" data-page="2">
+            <div class="floating-element bubble" style="top: 15%; left: 25%;"></div>
+            <div class="floating-element bubble" style="top: 45%; right: 10%;"></div>
+            <div class="floating-element jellyfish" style="top: 35%; left: 20%;">🪼</div>
+            <div class="floating-element star" style="top: 50%; right: 25%;">🌟</div>
+            
+            <div class="page-content">
+                <h1 class="page-title">เก่งขึ้นอีกหนึ่งเดือนแล้วนะคนดี</h1>
+                <p class="page-text typewriter" data-delay="0">อยากบอกให้รู้ว่า ชีวิตไม่จำเป็นต้องสมบูรณ์แบบตลอดเวลาก็ได้</p>
+                <p class="page-text typewriter" data-delay="500">แค่เธอตื่นมาใช้ชีวิต และผ่านแต่ละวันมาได้จนถึงวันนี้</p>
+                <p class="page-text typewriter" data-delay="1000">นั่นก็คือความสำเร็จที่น่าภูมิใจที่สุดแล้ว</p>
+                <p class="page-text typewriter" data-delay="1500">"มีความสุขกับรอยยิ้มเล็กๆ ในแต่ละวันให้เยอะขึ้นนะ"</p>
+            </div>
+            <p class="writer-credit">Writer | Angusforyou</p>
+        </div>
+
+        <!-- Page 3: อวยพรต้อนรับเดือนใหม่ -->
+        <div class="page page-3" data-page="3">
+            <div class="floating-element bubble" style="top: 25%; left: 30%;"></div>
+            <div class="floating-element bubble" style="top: 55%; right: 20%;"></div>
+            <div class="floating-element cloud" style="top: 20%; right: 15%;">☁️</div>
+            <div class="floating-element star" style="top: 45%; left: 10%;">✨</div>
+            
+            <div class="page-content">
+                <h1 class="page-title">ขอให้กันยายนปีนี้ เป็นเดือนที่อ่อนโยนและใจดีกับเธอเป็นพิเศษ</h1>
+                <p class="page-text typewriter" data-delay="0">ขอให้มีฝนตกในใจน้อยลง และมีสายรุ้งสดใสเข้ามาแทนที่</p>
+                <p class="page-text typewriter" data-delay="500">ไปที่ไหนก็ขอให้พบเจอแต่ผู้คนน่ารักและพลังงานบวก</p>
+                <p class="page-text typewriter" data-delay="1000">ไม่ว่าจะทำอะไร ก็ขอให้ทุกอย่างราบรื่นและเป็นไปตามที่หวังนะ</p>
+            </div>
+            <p class="writer-credit">Writer | Angusforyou</p>
+        </div>
+
+        <!-- Page 4: พื้นที่ปลอดภัย -->
+        <div class="page page-4" data-page="4">
+            <div class="floating-element bubble" style="top: 20%; left: 20%;"></div>
+            <div class="floating-element bubble" style="top: 50%; right: 25%;"></div>
+            <div class="floating-element jellyfish" style="top: 30%; right: 20%;">🪼</div>
+            <div class="floating-element star" style="top: 60%; left: 15%;">💫</div>
+            
+            <div class="page-content">
+                <h1 class="page-title">ต่อให้โลกข้างนอกจะวุ่นวาย หรือมีวันที่เหนื่อยจนแทบหมดแรง</h1>
+                <p class="page-text typewriter" data-delay="0">อย่าลืมว่าหันกลับมาตรงนี้ จะมีเค้าคอยเป็นที่พักใจให้เธอเสมอ</p>
+                <p class="page-text typewriter" data-delay="500">คอยรับฟัง คอยกอด และอยู่ข้างๆ ในทุกฤดูกาล</p>
+                <p class="page-text typewriter" data-delay="1000">เธอไม่ได้อยู่คนเดียวเลยนะ 🤍</p>
+            </div>
+            <p class="writer-credit">Writer | Angusforyou</p>
+        </div>
+
+        <!-- Page 5: บทสรุปและของขวัญ -->
+        <div class="page page-5" data-page="5">
+            <div class="floating-element bubble" style="top: 15%; left: 25%;"></div>
+            <div class="floating-element bubble" style="top: 40%; right: 15%;"></div>
+            <div class="floating-element cloud" style="top: 25%; left: 20%;">☁️</div>
+            <div class="floating-element star" style="top: 55%; right: 30%;">✨</div>
+            
+            <div class="page-content">
+                <h1 class="page-title">: August thank you for the lessons.<br>: September I am ready to be happy.</h1>
+                <p class="page-text typewriter" data-delay="0">เริ่มต้นเดือนกันยายนไปด้วยกันนะคนเก่ง</p>
+                <p class="page-text typewriter" data-delay="500">ยิ้มเยอะๆ แล้วจับมือเดินไปด้วยกันตลอดทั้งเดือนเลยนะ :) 🌻✨</p>
+            </div>
+            <p class="writer-credit">Writer | Angusforyou</p>
+        </div>
+
+        <!-- Navigation Arrows -->
+        <button class="nav-arrow prev hidden" id="prevBtn">❮</button>
+        <button class="nav-arrow next" id="nextBtn">❯</button>
+
+        <!-- Music Player -->
+        <button class="music-player" id="musicBtn">🔇</button>
+
+        <!-- Pagination Dots -->
+        <div class="pagination" id="pagination">
+            <div class="dot active" data-page="1"></div>
+            <div class="dot" data-page="2"></div>
+            <div class="dot" data-page="3"></div>
+            <div class="dot" data-page="4"></div>
+            <div class="dot" data-page="5"></div>
+        </div>
+
+        <!-- Voice Message Modal -->
+        <div class="modal" id="modal">
+            <div class="modal-content">
+                <h3>🌸 ของขวัญจากใจ</h3>
+                <p>เธอคือคนที่เก่งมากๆ แล้วนะ<br>
+                ขอบคุณที่พยายามมาตลอด<br>
+                ฉันภูมิใจในตัวเธอเสมอ :)</p>
+                <button class="modal-close" id="modalClose">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentPage = 1;
+        const totalPages = 5;
+        let isMusicPlaying = false;
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        // DOM Elements
+        const pages = document.querySelectorAll('.page');
+        const dots = document.querySelectorAll('.dot');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const musicBtn = document.getElementById('musicBtn');
+        const giftBtn = document.getElementById('giftBtn');
+        const modal = document.getElementById('modal');
+        const modalClose = document.getElementById('modalClose');
+
+        // Initialize
+        function init() {
+            updatePage();
+            setupEventListeners();
+            createFloatingElements();
+        }
+
+        // Update Page Display
+        function updatePage() {
+            pages.forEach((page, index) => {
+                page.classList.remove('active', 'prev');
+                if (index + 1 === currentPage) {
+                    page.classList.add('active');
+                } else if (index + 1 < currentPage) {
+                    page.classList.add('prev');
+                }
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index + 1 === currentPage);
+            });
+
+            prevBtn.classList.toggle('hidden', currentPage === 1);
+            nextBtn.classList.toggle('hidden', currentPage === totalPages);
+
+            // Trigger typewriter animation for current page
+            triggerTypewriter();
+        }
+
+        // Navigate to specific page
+        function goToPage(page) {
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                updatePage();
+            }
+        }
+
+        // Trigger typewriter effect
+        function triggerTypewriter() {
+            const activePage = document.querySelector('.page.active');
+            const texts = activePage.querySelectorAll('.page-text.typewriter');
+            
+            texts.forEach((text, index) => {
+                text.style.opacity = '0';
+                text.style.transform = 'translateY(20px)';
+                
+                const delay = parseInt(text.dataset.delay) || 0;
+                setTimeout(() => {
+                    text.style.transition = 'all 0.8s ease';
+                    text.style.opacity = '1';
+                    text.style.transform = 'translateY(0)';
+                }, delay + 300);
+            });
+        }
+
+        // Create floating elements
+        function createFloatingElements() {
+            const container = document.querySelector('.book-container');
+            
+            for (let i = 0; i < 10; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'floating-element bubble';
+                bubble.style.left = Math.random() * 100 + '%';
+                bubble.style.top = Math.random() * 100 + '%';
+                bubble.style.animationDelay = Math.random() * 6 + 's';
+                bubble.style.animationDuration = (4 + Math.random() * 4) + 's';
+                container.appendChild(bubble);
+            }
+        }
+
+        // Create particle effect on touch/click
+        function createParticle(x, y) {
+            const colors = ['#fff', '#ffd700', '#ff69b4', '#87ceeb'];
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            particle.style.width = (5 + Math.random() * 10) + 'px';
+            particle.style.height = particle.style.width;
+            particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+            document.body.appendChild(particle);
+            
+            setTimeout(() => particle.remove(), 1000);
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Navigation buttons
+            prevBtn.addEventListener('click', () => goToPage(currentPage - 1));
+            nextBtn.addEventListener('click', () => goToPage(currentPage + 1));
+
+            // Dot navigation
+            dots.forEach(dot => {
+                dot.addEventListener('click', () => {
+                    goToPage(parseInt(dot.dataset.page));
+                });
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') goToPage(currentPage - 1);
+                if (e.key === 'ArrowRight') goToPage(currentPage + 1);
+            });
+
+            // Touch/Swipe navigation
+            document.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+
+            document.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+
+            // Click/Touch particle effect
+            document.addEventListener('click', (e) => {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        createParticle(
+                            e.clientX + (Math.random() - 0.5) * 50,
+                            e.clientY + (Math.random() - 0.5) * 50
+                        );
+                    }, i * 50);
+                }
+            });
+
+            // Music player
+            musicBtn.addEventListener('click', toggleMusic);
+
+            // Gift box
+            giftBtn.addEventListener('click', () => {
+                modal.classList.add('show');
+            });
+
+            // Modal close
+            modalClose.addEventListener('click', () => {
+                modal.classList.remove('show');
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                }
+            });
+        }
+
+        // Handle swipe
+        function handleSwipe() {
+            const threshold = 50;
+            if (touchStartX - touchEndX > threshold) {
+                goToPage(currentPage + 1);
+            } else if (touchEndX - touchStartX > threshold) {
+                goToPage(currentPage - 1);
+            }
+        }
+
+        // Toggle music
+        function toggleMusic() {
+            isMusicPlaying = !isMusicPlaying;
+            musicBtn.textContent = isMusicPlaying ? '🔊' : '🔇';
+            musicBtn.classList.toggle('playing', isMusicPlaying);
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
